@@ -1,0 +1,6 @@
+{
+  "name": "Nhân Trung Long Phượng - Khoa Cử Triều Nguyễn",
+  "description": "Trò chơi nhập vai 3D góc nhìn thứ nhất kết hợp trắc nghiệm lịch sử Triều Nguyễn thế kỷ 19 tại Kinh thành Huế.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
