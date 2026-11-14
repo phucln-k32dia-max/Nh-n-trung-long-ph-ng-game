@@ -16,7 +16,7 @@ import { formatDuration, LeaderboardModal } from './components/LeaderboardModal'
 import { QuestionPanel } from './components/QuestionPanel';
 import { DEFAULT_QUESTIONS, EMPEROR_DIALOGUE, getImperialRank } from './data/questions';
 import { HueCitadelViewport } from './three/HueCitadelViewport';
-import { GamePhase, LeaderboardEntry, QuizQuestion } from './types/game';
+import { GamePhase, LeaderboardEntry } from './types/game';
 
 const EXAM_DURATION_SECONDS = 600; // 10 phút đếm ngược
 const STEPS_PER_QUESTION = 5;
@@ -44,8 +44,7 @@ function saveLocalLeaderboard(entries: LeaderboardEntry[]) {
 export default function App() {
   const [phase, setPhase] = useState<GamePhase>('entry');
   const [studentName, setStudentName] = useState('');
-  const [questions, setQuestions] = useState<QuizQuestion[]>(DEFAULT_QUESTIONS);
-  const [customSourceLabel, setCustomSourceLabel] = useState<string | null>(null);
+  const questions = DEFAULT_QUESTIONS;
 
   // Dialogue & Gate States
   const [dialogueIndex, setDialogueIndex] = useState(0);
@@ -453,16 +452,7 @@ export default function App() {
         <EntryScreen
           studentName={studentName}
           onChangeName={setStudentName}
-          questions={questions}
-          customSourceLabel={customSourceLabel}
-          onLoadCustomQuestions={(loaded, fileName) => {
-            setQuestions(loaded);
-            setCustomSourceLabel(fileName);
-          }}
-          onResetDefaultQuestions={() => {
-            setQuestions(DEFAULT_QUESTIONS);
-            setCustomSourceLabel(null);
-          }}
+          totalQuestions={totalQuestions}
           onStartGame={handleStartFromEntry}
           onOpenLeaderboard={() => setLeaderboardOpen(true)}
           topEntryCount={leaderboard.length}

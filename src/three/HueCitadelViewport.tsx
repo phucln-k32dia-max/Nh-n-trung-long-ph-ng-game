@@ -4,17 +4,20 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { GamePhase } from '../types/game';
 import {
   createBronzeCauldron,
-  createCourtyardTree,
   createDienThaiHoaComplex,
   createDragonThrone,
   createEmperorFigure,
+  createImperialGuardFigure,
   createMandarinFigure,
   createSidePavilion,
 } from './imperialModels';
 import {
   createPhotoMonument,
+  createRealTreeFactory,
+  createRoadsideMonument,
   isDienThaiHoaSkyPixel,
   isNgoMonSkyPixel,
+  RoadsideMonumentResult,
 } from './photoArchitecture';
 import {
   createAoThungTexture,
@@ -144,10 +147,10 @@ export const HueCitadelViewport: React.FC<HueCitadelViewportProps> = ({
     scene.add(rimLight);
 
     // Warm interior hall lantern lights (inside Điện Thái Hòa z = -100 .. -126)
-    const hallLight1 = new THREE.PointLight(0xffb85c, 4.5, 28, 1.5);
-    hallLight1.position.set(0, 7.2, -110);
-    const hallLight2 = new THREE.PointLight(0xffcb77, 5.2, 30, 1.5);
-    hallLight2.position.set(0, 7.4, -120);
+    const hallLight1 = new THREE.PointLight(0xffb85c, 4.8, 28, 1.45);
+    hallLight1.position.set(0, 5.45, -109);
+    const hallLight2 = new THREE.PointLight(0xffcb77, 5.4, 30, 1.45);
+    hallLight2.position.set(0, 5.45, -119);
     scene.add(hallLight1, hallLight2);
 
     // --------------------------------------------------------
@@ -346,13 +349,13 @@ export const HueCitadelViewport: React.FC<HueCitadelViewportProps> = ({
     const dienThaiHoaFacade = createPhotoMonument({
       imageUrl:
         '/assets/aistudio/baodanang.vn-dataimages-202502-original-_images1766808_dienthaihoa_anh01_c2fcf658.jpg',
-      cropTopRatio: 0.175,
+      cropTopRatio: 0.183,
       cropBottomRatio: 0.488,
       totalWidth: 27,
-      totalHeight: 5.65,
+      totalHeight: 5.51,
       doorLeftU: 0.453,
       doorRightU: 0.547,
-      doorHeightRatio: 0.46,
+      doorHeightRatio: 0.472,
       isSkyPixel: isDienThaiHoaSkyPixel,
       fallbackColor: 0x8f181c,
       anisotropy: maxAnisotropy,
@@ -370,12 +373,18 @@ export const HueCitadelViewport: React.FC<HueCitadelViewportProps> = ({
     scene.add(emperor.group);
 
     // --------------------------------------------------------
-    // 3. Cửu Đỉnh Bronze Cauldrons, Tả Vu / Hữu Vu Pavilions, Lush Tree Groves & Banners
+    // 3. Cửu Đỉnh Bronze Cauldrons, Tả Vu / Hữu Vu Pavilions, Real Sculpted Pine Groves & Banners
     // --------------------------------------------------------
+    const realTreeFactory = createRealTreeFactory(
+      '/assets/aistudio/120250513110642_b605442e.jpg',
+      maxAnisotropy,
+    );
+
+    const treeZList = [36, 26, 16, 4, -14, -26, -38, -50, -68, -86, -96];
     for (const side of [-1, 1]) {
       for (const cz of [-22, -44, -66, -86]) {
         const cauldron = createBronzeCauldron();
-        cauldron.position.set(side * 9.8, 0, cz);
+        cauldron.position.set(side * 13.0, 0, cz);
         scene.add(cauldron);
       }
 
@@ -386,19 +395,192 @@ export const HueCitadelViewport: React.FC<HueCitadelViewportProps> = ({
         scene.add(pav);
       }
 
-      // Dense lush green tree groves framing the gardens & outer courtyard (like aerial photo)
-      for (const tz of [36, 26, 16, 4, -14, -26, -38, -50, -68, -86, -96]) {
-        const tree1 = createCourtyardTree();
-        tree1.position.set(side * 18.2, 0, tz);
+      // Real sculpted imperial pine trees (Tùng la hán) framing gardens & outer courtyard
+      treeZList.forEach((tz, idx) => {
+        const tree1 = realTreeFactory.createTree();
+        tree1.position.set(side * 18.8, 0, tz);
+        tree1.rotation.y = idx * 1.15 + (side > 0 ? 0.55 : 0);
         tree1.scale.setScalar(0.92 + ((Math.abs(tz) % 5) * 0.08));
         scene.add(tree1);
 
-        const tree2 = createCourtyardTree();
-        tree2.position.set(side * 27.5, 0, tz + 3);
+        const tree2 = realTreeFactory.createTree();
+        tree2.position.set(side * 27.8, 0, tz + 3);
+        tree2.rotation.y = idx * 1.65 + (side > 0 ? 1.2 : 0.3);
         tree2.scale.setScalar(1.05 + ((Math.abs(tz) % 4) * 0.09));
         scene.add(tree2);
-      }
+      });
     }
+
+    // --------------------------------------------------------
+    // 3B. 13 Heritage Monuments evenly distributed along both sides of the Imperial Path
+    //     Left side: z = -15, -27, -39, -51, -63, -75, -87 (12m interval)
+    //     Right side: z = -21, -33, -45, -57, -69, -81     (12m staggered interval)
+    // --------------------------------------------------------
+    const neutralBrightSky = (r: number, g: number, b: number) => {
+      const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+      const spread = Math.max(r, g, b) - Math.min(r, g, b);
+      return (luma > 168 && spread < 44) || (b > r + 12 && luma > 130);
+    };
+    const blueSky = (r: number, g: number, b: number) => {
+      const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+      const spread = Math.max(r, g, b) - Math.min(r, g, b);
+      return (b > r + 14 && luma > 105) || (luma > 188 && spread < 36);
+    };
+
+    const monumentSpecs = [
+      {
+        imageUrl: '/assets/aistudio/frame-427319874-10400_33a9f829.png',
+        cropLeftRatio: 0.255,
+        cropRightRatio: 0.835,
+        cropTopRatio: 0.04,
+        cropBottomRatio: 0.81,
+        width: 5.8,
+        height: 3.9,
+        isBgPixel: neutralBrightSky,
+      },
+      {
+        imageUrl: '/assets/aistudio/images_dd6e7363.jpg',
+        cropLeftRatio: 0.23,
+        cropRightRatio: 0.74,
+        cropTopRatio: 0.05,
+        cropBottomRatio: 0.87,
+        width: 3.8,
+        height: 5.2,
+        isBgPixel: blueSky,
+      },
+      {
+        imageUrl: '/assets/aistudio/images_f8fd1629.jpg',
+        cropLeftRatio: 0.1,
+        cropRightRatio: 0.89,
+        cropTopRatio: 0.145,
+        cropBottomRatio: 0.5,
+        width: 5.8,
+        height: 3.0,
+        isBgPixel: (r: number, g: number, b: number, _nx: number, ny: number) => {
+          const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+          const isRedFlag = r > g + 24 && r > 120;
+          return ny < 0.34 && luma < 128 && !isRedFlag;
+        },
+      },
+      {
+        imageUrl: '/assets/aistudio/thap-po-sah-inu-2_8ef2b55b.jpg',
+        cropLeftRatio: 0.3,
+        cropRightRatio: 0.92,
+        cropTopRatio: 0.11,
+        cropBottomRatio: 0.84,
+        width: 4.5,
+        height: 4.3,
+        isBgPixel: (r: number, g: number, b: number, nx: number, ny: number) =>
+          blueSky(r, g, b) || (ny < 0.32 && nx > 0.58 && g >= r - 2),
+      },
+      {
+        imageUrl: '/assets/aistudio/images_470de7c3.jpg',
+        cropLeftRatio: 0.04,
+        cropRightRatio: 0.96,
+        cropTopRatio: 0.33,
+        cropBottomRatio: 0.77,
+        width: 6.0,
+        height: 3.1,
+        isBgPixel: neutralBrightSky,
+      },
+      {
+        imageUrl: '/assets/aistudio/images_f09dc646.jpg',
+        cropLeftRatio: 0.31,
+        cropRightRatio: 0.68,
+        cropTopRatio: 0.255,
+        cropBottomRatio: 0.805,
+        width: 3.8,
+        height: 4.2,
+        isBgPixel: (r: number, g: number, b: number) => {
+          const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+          const spread = Math.max(r, g, b) - Math.min(r, g, b);
+          return luma > 158 && spread < 28;
+        },
+      },
+      {
+        imageUrl: '/assets/aistudio/Anh-Hoang-Thanh-Than-11_a2f542ea.jpg',
+        cropLeftRatio: 0.01,
+        cropRightRatio: 0.99,
+        cropTopRatio: 0.23,
+        cropBottomRatio: 0.83,
+        width: 6.0,
+        height: 3.5,
+        isBgPixel: blueSky,
+      },
+      {
+        imageUrl: '/assets/aistudio/van-mieu-quoc-tu-giam-miti.vn6_b002a3e84488487bb217bd7689f80e19_9ec40318.webp',
+        cropLeftRatio: 0.22,
+        cropRightRatio: 0.76,
+        cropTopRatio: 0.03,
+        cropBottomRatio: 0.89,
+        width: 4.6,
+        height: 4.3,
+        isBgPixel: neutralBrightSky,
+      },
+      {
+        imageUrl: '/assets/aistudio/images_ec10b9c5.jpg',
+        cropLeftRatio: 0.14,
+        cropRightRatio: 0.84,
+        cropTopRatio: 0.1,
+        cropBottomRatio: 0.92,
+        width: 4.8,
+        height: 4.1,
+        isBgPixel: neutralBrightSky,
+      },
+      {
+        imageUrl: '/assets/aistudio/9d11f499434319f1931e7dd558e52554_7617bddd.jpg',
+        cropLeftRatio: 0.06,
+        cropRightRatio: 0.86,
+        cropTopRatio: 0.06,
+        cropBottomRatio: 0.89,
+        width: 4.1,
+        height: 5.2,
+        isBgPixel: blueSky,
+      },
+      {
+        imageUrl: '/assets/aistudio/23A04032-2_1ce8af8e.jpg',
+        cropLeftRatio: 0.04,
+        cropRightRatio: 0.95,
+        cropTopRatio: 0.1,
+        cropBottomRatio: 0.79,
+        width: 6.0,
+        height: 3.3,
+        isBgPixel: blueSky,
+      },
+      {
+        imageUrl: '/assets/aistudio/lang-bac_8b2848fb.jpg',
+        cropLeftRatio: 0.16,
+        cropRightRatio: 0.82,
+        cropTopRatio: 0.01,
+        cropBottomRatio: 0.86,
+        width: 5.6,
+        height: 3.8,
+        isBgPixel: neutralBrightSky,
+      },
+      {
+        imageUrl: '/assets/aistudio/h1-17043512183492038699419_ae279198.png',
+        cropLeftRatio: 0.03,
+        cropRightRatio: 0.96,
+        cropTopRatio: 0.25,
+        cropBottomRatio: 0.64,
+        width: 6.0,
+        height: 3.2,
+        isBgPixel: blueSky,
+      },
+    ];
+
+    const roadsideMonuments: RoadsideMonumentResult[] = monumentSpecs.map((spec, idx) => {
+      const side = idx % 2 === 0 ? -1 : 1;
+      const zPos = -15 - idx * 6; // Even 6m alternating spacing: -15 (L), -21 (R), -27 (L) ... -87 (L)
+      const monument = createRoadsideMonument({
+        ...spec,
+        anisotropy: maxAnisotropy,
+      });
+      monument.group.position.set(side * 9.2, 0, zPos);
+      monument.group.rotation.y = side * -0.42; // Angle gently inward toward the imperial avenue
+      scene.add(monument.group);
+      return monument;
+    });
 
     // Imperial Flag Banners along Sân Đại Triều Nghi (swaying softly)
     const bannerClothMeshes: THREE.Mesh[] = [];
@@ -430,6 +612,8 @@ export const HueCitadelViewport: React.FC<HueCitadelViewportProps> = ({
       { robeHex: '#1e3a8a', trimHex: '#eab308', badgeHex: '#7f1d1d' }, // Lam thẫm
       { robeHex: '#581c87', trimHex: '#e2b857', badgeHex: '#065f46' }, // Tím trầm
       { robeHex: '#78350f', trimHex: '#d97706', badgeHex: '#991b1b' }, // Nâu gụ
+      { robeHex: '#92400e', trimHex: '#fcd34d', badgeHex: '#7c2d12' }, // Vàng đất sẫm
+      { robeHex: '#312e81', trimHex: '#d4a843', badgeHex: '#4c1d95' }, // Chàm hoàng triều
     ];
 
     const courtyardMandarinZ = [-18, -32, -46, -60, -74, -84];
@@ -443,17 +627,36 @@ export const HueCitadelViewport: React.FC<HueCitadelViewportProps> = ({
       }
     });
 
-    // Court Mandarins inside Điện Thái Hòa flanking the Emperor
-    const hallMandarinZ = [-108, -112.5, -117];
-    hallMandarinZ.forEach((hz, idx) => {
+    // Two ceremonial ranks of Court Mandarins (20 Quan Đại Thần) inside Điện Thái Hòa
+    const hallInnerRankZ = [-104.0, -107.6, -111.2, -114.8, -118.4];
+    hallInnerRankZ.forEach((hz, idx) => {
       for (const side of [-1, 1]) {
         const pal = otherRobePalettes[(idx + (side > 0 ? 2 : 0)) % otherRobePalettes.length];
         const m = createMandarinFigure({ ...pal, bowAngle: 0.14 }, maxAnisotropy);
-        m.position.set(side * 4.2, 1.52, hz);
-        m.rotation.y = side > 0 ? -Math.PI * 0.65 : Math.PI * 0.65;
+        m.position.set(side * 3.15, 1.52, hz);
+        m.rotation.y = side > 0 ? -Math.PI * 0.68 : Math.PI * 0.68;
         scene.add(m);
       }
     });
+
+    const hallOuterRankZ = [-105.4, -109.0, -112.6, -116.2, -119.8];
+    hallOuterRankZ.forEach((hz, idx) => {
+      for (const side of [-1, 1]) {
+        const pal = otherRobePalettes[(idx + (side > 0 ? 4 : 1)) % otherRobePalettes.length];
+        const m = createMandarinFigure({ ...pal, bowAngle: 0.12 }, maxAnisotropy);
+        m.position.set(side * 5.25, 1.52, hz);
+        m.rotation.y = side > 0 ? -Math.PI * 0.62 : Math.PI * 0.62;
+        scene.add(m);
+      }
+    });
+
+    // 2 Imperial Guards (Thị Vệ) flanking the Dragon Throne Dais
+    for (const side of [-1, 1]) {
+      const guard = createImperialGuardFigure(maxAnisotropy);
+      guard.position.set(side * 3.85, 1.52, -121.8);
+      guard.rotation.y = side > 0 ? -0.22 : 0.22;
+      scene.add(guard);
+    }
 
     // --------------------------------------------------------
     // 4. Player Mandarin Character (Ngọc Bích Jade-Teal Áo Thụng!)
@@ -705,14 +908,14 @@ export const HueCitadelViewport: React.FC<HueCitadelViewportProps> = ({
         playerMandarin.visible = true;
         celebrationPetals.visible = true;
 
-        // Gentle sweeping third-person orbit showing entire hall, Emperor, mandarins, and player in Jade-Teal Áo Thụng
+        // Gentle sweeping third-person orbit inside the nave showing Emperor, 20+ mandarins, wooden floor & player
         const orbitAngle = Math.sin(elapsed * 0.28) * 0.42;
         _desiredCamPos.set(
-          Math.sin(orbitAngle) * 7.8,
-          5.3 + Math.sin(elapsed * 0.35) * 0.25,
-          -101.2,
+          Math.sin(orbitAngle) * 4.6,
+          4.55 + Math.sin(elapsed * 0.35) * 0.2,
+          -101.8,
         );
-        _lookTarget.set(0, 2.95, -116.5);
+        _lookTarget.set(0, 2.7, -116.2);
 
         // Emperor raises golden decree scroll during commendation
         const targetRaise = st.isCommended ? -0.65 : -0.15;
@@ -727,7 +930,7 @@ export const HueCitadelViewport: React.FC<HueCitadelViewportProps> = ({
         const posAttr = celebrationPetals.geometry.getAttribute('position') as THREE.BufferAttribute;
         for (let i = 0; i < petalCount; i++) {
           let py = posAttr.getY(i) - delta * 0.55;
-          if (py < 1.8) py = 8.4;
+          if (py < 1.8) py = 5.8;
           posAttr.setY(i, py);
         }
         posAttr.needsUpdate = true;
@@ -799,6 +1002,8 @@ export const HueCitadelViewport: React.FC<HueCitadelViewportProps> = ({
       });
       ngoMon.dispose();
       dienThaiHoaFacade.dispose();
+      realTreeFactory.dispose();
+      roadsideMonuments.forEach((m) => m.dispose());
       envTex.dispose();
       renderer.dispose();
       if (renderer.domElement.parentNode === container) {

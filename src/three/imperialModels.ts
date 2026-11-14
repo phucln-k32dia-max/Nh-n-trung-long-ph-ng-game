@@ -3,6 +3,7 @@ import {
   createAoThungTexture,
   createPlaqueTexture,
   createRedLacquerTexture,
+  createRoyalCarpetTexture,
   createThroneHallFloorTexture,
   createYellowRoofTileTexture,
 } from './proceduralTextures';
@@ -275,13 +276,45 @@ export function createDragonThrone(anisotropy = 8): THREE.Group {
   const dragonCrest = new THREE.Mesh(new THREE.ConeGeometry(0.42, 0.55, 6), goldMat);
   dragonCrest.position.set(0, 2.85, -0.48);
 
-  // Imperial Canopy (Bửu tán) supported by 4 gilded posts
-  const canopy = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.7, 0.45, 8), goldMat);
-  canopy.position.set(0, 4.35, -0.1);
-  const canopyTrim = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 1.72, 0.22, 8), redLacquerMat);
-  canopyTrim.position.set(0, 4.05, -0.1);
+  // Imperial Canopy (Bửu tán)
+  const canopy = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.62, 0.4, 8), goldMat);
+  canopy.position.set(0, 3.85, -0.1);
+  const canopyTrim = new THREE.Mesh(new THREE.CylinderGeometry(1.62, 1.65, 0.2, 8), redLacquerMat);
+  canopyTrim.position.set(0, 3.58, -0.1);
 
   group.add(seat, backrest, leftArm, rightArm, dragonCrest, canopy, canopyTrim);
+  return group;
+}
+
+/**
+ * Imperial Palace Guard (Thị vệ / Cấm vệ quân) standing beside the throne dais with ceremonial halberd.
+ */
+export function createImperialGuardFigure(anisotropy = 8): THREE.Group {
+  const group = createMandarinFigure(
+    {
+      robeHex: '#991b1b',
+      trimHex: '#eab308',
+      badgeHex: '#78350f',
+      bowAngle: 0,
+    },
+    anisotropy,
+  );
+
+  const staffMat = new THREE.MeshStandardMaterial({ color: 0x5c1914, roughness: 0.45 });
+  const bladeMat = new THREE.MeshStandardMaterial({ color: 0xf5c542, roughness: 0.25, metalness: 0.88 });
+
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.028, 2.55, 8), staffMat);
+  pole.position.set(0.36, 1.28, 0.14);
+  pole.castShadow = true;
+
+  const spearHead = new THREE.Mesh(new THREE.ConeGeometry(0.065, 0.28, 6), bladeMat);
+  spearHead.position.set(0.36, 2.66, 0.14);
+
+  const crescent = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.018, 6, 12, Math.PI), bladeMat);
+  crescent.position.set(0.36, 2.45, 0.14);
+  crescent.rotation.z = Math.PI / 2;
+
+  group.add(pole, spearHead, crescent);
   return group;
 }
 
@@ -491,7 +524,7 @@ export function createNgoMonGate(anisotropy = 8): {
 }
 
 /**
- * Điện Thái Hòa Marble Terrace & Grand Interior Hall seamlessly connected behind the real photo facade!
+ * Điện Thái Hòa Marble Terrace & Grand Timber-Floored Interior Hall seamlessly connected behind the real photo facade.
  */
 export function createDienThaiHoaComplex(anisotropy = 8): {
   group: THREE.Group;
@@ -509,10 +542,31 @@ export function createDienThaiHoaComplex(anisotropy = 8): {
     roughness: 0.25,
     metalness: 0.85,
   });
-  const floorMat = new THREE.MeshStandardMaterial({
+  const bronzeMat = new THREE.MeshStandardMaterial({
+    color: 0x6b4f2e,
+    roughness: 0.32,
+    metalness: 0.82,
+  });
+  const woodFloorMat = new THREE.MeshStandardMaterial({
     map: createThroneHallFloorTexture(anisotropy),
-    roughness: 0.42,
+    roughness: 0.36,
+    metalness: 0.05,
+  });
+  const carpetMat = new THREE.MeshStandardMaterial({
+    map: createRoyalCarpetTexture(anisotropy),
+    roughness: 0.65,
+    metalness: 0.06,
+  });
+  const timberCeilingMat = new THREE.MeshStandardMaterial({
+    color: 0x3b130f,
+    roughness: 0.68,
     metalness: 0.08,
+  });
+  const lanternGlowMat = new THREE.MeshStandardMaterial({
+    color: 0xffd27d,
+    emissive: 0xff9d2e,
+    emissiveIntensity: 0.9,
+    roughness: 0.35,
   });
 
   // Grand Marble Terrace (Sân Bái Mạng) from z = 0 (at complex origin z=-96) back to z = -34
@@ -529,89 +583,234 @@ export function createDienThaiHoaComplex(anisotropy = 8): {
     group.add(step);
   }
 
-  // Polished Throne Hall Floor on top of terrace
-  const hallFloor = new THREE.Mesh(new THREE.PlaneGeometry(24, 30), floorMat);
+  // Polished Wooden Plank Floor (Sàn lợp gỗ lim) inside Điện Thái Hòa
+  const hallFloor = new THREE.Mesh(new THREE.PlaneGeometry(23.6, 29.5), woodFloorMat);
   hallFloor.rotation.x = -Math.PI / 2;
-  hallFloor.position.set(0, 1.52, -16);
+  hallFloor.position.set(0, 1.52, -16.2);
   hallFloor.receiveShadow = true;
   group.add(hallFloor);
 
-  // Red Lacquered Colonnade inside Điện Thái Hòa
-  const colGeo = new THREE.CylinderGeometry(0.32, 0.36, 7.2, 14);
-  const zRows = [-4.5, -10.5, -16.5, -23, -29];
-  const xCols = [-10.5, -6.2, -2.6, 2.6, 6.2, 10.5];
+  // Central Imperial Crimson & Gold Carpet Runner leading to Dragon Throne Dais
+  const royalCarpet = new THREE.Mesh(new THREE.PlaneGeometry(3.3, 21.5), carpetMat);
+  royalCarpet.rotation.x = -Math.PI / 2;
+  royalCarpet.position.set(0, 1.54, -13.2);
+  royalCarpet.receiveShadow = true;
+  group.add(royalCarpet);
+
+  // Red Lacquered Colonnade inside Điện Thái Hòa (sized so roof never protrudes above exterior facade)
+  const colGeo = new THREE.CylinderGeometry(0.3, 0.34, 4.7, 14);
+  const zRows = [-4.8, -10.5, -16.5, -22.8, -28.8];
+  const xCols = [-10.4, -6.2, -2.5, 2.5, 6.2, 10.4];
   for (const zr of zRows) {
     for (const xc of xCols) {
       if (Math.abs(xc) < 3 && zr < -3) continue;
+      const colHeight = Math.abs(xc) < 7 ? 5.05 : 4.35;
       const col = new THREE.Mesh(colGeo, redMat);
-      col.position.set(xc, 5.1, zr);
+      col.scale.y = colHeight / 4.7;
+      col.position.set(xc, 1.52 + colHeight / 2, zr);
       col.castShadow = true;
       group.add(col);
 
-      const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.44, 0.35, 14), goldMat);
-      ring.position.set(xc, 1.68, zr);
+      const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.42, 0.3, 14), goldMat);
+      ring.position.set(xc, 1.67, zr);
       group.add(ring);
     }
   }
 
-  // Side walls & Back wall of Điện Thái Hòa interior
-  const backWall = new THREE.Mesh(new THREE.BoxGeometry(24, 7.6, 0.6), redMat);
-  backWall.position.set(0, 5.3, -30.5);
-  const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.6, 7.6, 28.5), redMat);
-  leftWall.position.set(-11.8, 5.3, -16.2);
-  const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.6, 7.6, 28.5), redMat);
-  rightWall.position.set(11.8, 5.3, -16.2);
-
+  // Side walls & Back wall strictly below exterior photo roof silhouette (y <= 5.65 at sides, 6.45 center)
+  const backWall = new THREE.Mesh(new THREE.BoxGeometry(22.4, 5.05, 0.5), redMat);
+  backWall.position.set(0, 4.04, -30.4);
+  const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.55, 4.15, 27.6), redMat);
+  leftWall.position.set(-11.1, 3.59, -16.7);
+  const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.55, 4.15, 27.6), redMat);
+  rightWall.position.set(11.1, 3.59, -16.7);
   group.add(backWall, leftWall, rightWall);
 
-  // Interior Royal Plaque "NHÂN TRUNG LONG PHƯỢNG" above Dragon Throne
+  // Pitched Imperial Timber Ceiling & Rafters (Vì kèo gỗ) staying completely behind photo roof
+  const leftSlope = new THREE.Mesh(new THREE.BoxGeometry(11.6, 0.22, 27.6), timberCeilingMat);
+  leftSlope.position.set(-5.6, 6.15, -16.7);
+  leftSlope.rotation.z = 0.085;
+  const rightSlope = new THREE.Mesh(new THREE.BoxGeometry(11.6, 0.22, 27.6), timberCeilingMat);
+  rightSlope.position.set(5.6, 6.15, -16.7);
+  rightSlope.rotation.z = -0.085;
+  group.add(leftSlope, rightSlope);
+
+  // Exposed Red-and-Gold Crossbeams (Xà ngang) across the nave
+  for (const zr of zRows) {
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(13.2, 0.26, 0.3), redMat);
+    beam.position.set(0, 6.18, zr);
+    const beamTrim = new THREE.Mesh(new THREE.BoxGeometry(13.25, 0.08, 0.32), goldMat);
+    beamTrim.position.set(0, 6.03, zr);
+    group.add(beam, beamTrim);
+  }
+
+  // Imperial Folding Screen (Bình phong sơn son thếp vàng) behind Dragon Throne
+  const screenCenter = new THREE.Mesh(new THREE.BoxGeometry(4.6, 3.4, 0.16), redMat);
+  screenCenter.position.set(0, 3.22, -29.2);
+  const screenGoldFrame = new THREE.Mesh(new THREE.BoxGeometry(4.8, 3.55, 0.1), goldMat);
+  screenGoldFrame.position.set(0, 3.22, -29.26);
+  group.add(screenCenter, screenGoldFrame);
+  for (const side of [-1, 1]) {
+    const wing = new THREE.Mesh(new THREE.BoxGeometry(2.2, 3.1, 0.14), redMat);
+    wing.position.set(side * 3.25, 3.07, -28.7);
+    wing.rotation.y = side * -0.35;
+    const wingTrim = new THREE.Mesh(new THREE.BoxGeometry(2.3, 3.2, 0.08), goldMat);
+    wingTrim.position.set(side * 3.25, 3.07, -28.75);
+    wingTrim.rotation.y = side * -0.35;
+    group.add(wing, wingTrim);
+  }
+
+  // Interior Royal Plaque "NHÂN TRUNG LONG PHƯỢNG" above screen & throne
   const innerPlaqueTex = createPlaqueTexture('人中龍鳳', 'NHÂN TRUNG LONG PHƯỢNG', '#7a1218', anisotropy);
   const innerPlaque = new THREE.Mesh(
-    new THREE.BoxGeometry(5.6, 1.55, 0.18),
+    new THREE.BoxGeometry(4.8, 1.25, 0.18),
     new THREE.MeshStandardMaterial({ map: innerPlaqueTex, roughness: 0.3, metalness: 0.35 }),
   );
-  innerPlaque.position.set(0, 7.2, -29.8);
+  innerPlaque.position.set(0, 5.75, -29.4);
   group.add(innerPlaque);
 
-  // Interior dark-lacquered ceiling enclosing the hall
-  const ceiling = new THREE.Mesh(
-    new THREE.BoxGeometry(24, 0.3, 28.5),
-    new THREE.MeshStandardMaterial({ color: 0x451210, roughness: 0.7 }),
+  // Vertical Golden Couplets (Câu đối) on inner colonnade pillars
+  const coupletTex = createPlaqueTexture('御', 'TRIỀU ĐÌNH NGHI LỄ', '#6d1015', anisotropy);
+  const coupletMat = new THREE.MeshStandardMaterial({ map: coupletTex, roughness: 0.35, metalness: 0.3 });
+  for (const side of [-1, 1]) {
+    for (const cz of [-10.1, -22.4]) {
+      const couplet = new THREE.Mesh(new THREE.BoxGeometry(0.42, 2.6, 0.08), coupletMat);
+      couplet.position.set(side * 6.0, 3.6, cz);
+      couplet.rotation.y = side * -0.25;
+      group.add(couplet);
+    }
+  }
+
+  // Pair of Imperial Golden Parasols (Lọng vàng) & Feather Fans (Quạt vả) flanking Dragon Throne
+  for (const side of [-1, 1]) {
+    const parasol = new THREE.Group();
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.045, 3.8, 10), redMat);
+    pole.position.y = 1.9;
+    const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 0.22, 12), goldMat);
+    stand.position.y = 0.11;
+    const dome = new THREE.Mesh(new THREE.ConeGeometry(0.88, 0.65, 12), goldMat);
+    dome.position.y = 3.72;
+    const skirt = new THREE.Mesh(new THREE.CylinderGeometry(0.88, 0.9, 0.32, 12, 1, true), redMat);
+    skirt.position.y = 3.25;
+    const finial = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 10), goldMat);
+    finial.position.y = 4.08;
+    parasol.add(pole, stand, dome, skirt, finial);
+    parasol.position.set(side * 3.15, 1.52, -25.4);
+    group.add(parasol);
+
+    // Ceremonial Feather Fan (Quạt vả) slightly forward and outward
+    const fan = new THREE.Group();
+    const fanPole = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.038, 3.1, 8), redMat);
+    fanPole.position.y = 1.55;
+    const fanStand = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 0.18, 10), goldMat);
+    fanStand.position.y = 0.09;
+    const fanLeaf = new THREE.Mesh(new THREE.CylinderGeometry(0.56, 0.56, 0.05, 16), goldMat);
+    fanLeaf.rotation.x = Math.PI / 2;
+    fanLeaf.position.y = 3.15;
+    fan.add(fanPole, fanStand, fanLeaf);
+    fan.position.set(side * 3.75, 1.52, -23.8);
+    fan.rotation.y = side * -0.25;
+    group.add(fan);
+  }
+
+  // Pair of Bronze Incense Burners (Đỉnh đồng / Lư hương) on lacquered stands before the Dais
+  for (const side of [-1, 1]) {
+    const burner = new THREE.Group();
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.55, 0.75), redMat);
+    base.position.y = 0.275;
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.22, 0.45, 16), bronzeMat);
+    body.position.y = 0.82;
+    const lid = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.28, 12), goldMat);
+    lid.position.y = 1.18;
+    for (const hSide of [-1, 1]) {
+      const ear = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.02, 6, 12), goldMat);
+      ear.position.set(hSide * 0.28, 0.92, 0);
+      burner.add(ear);
+    }
+    burner.add(base, body, lid);
+    burner.position.set(side * 2.25, 1.52, -21.2);
+    group.add(burner);
+  }
+
+  // Ceremonial Court Drum (Trống chầu) & Bronze Gong (Chiêng đồng) in side bays
+  const drumGroup = new THREE.Group();
+  const drumFrameL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.75, 0.12), redMat);
+  drumFrameL.position.set(0, 0.88, -0.58);
+  const drumFrameR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.75, 0.12), redMat);
+  drumFrameR.position.set(0, 0.88, 0.58);
+  const drumBody = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.75, 18), redMat);
+  drumBody.rotation.z = Math.PI / 2;
+  drumBody.position.y = 1.15;
+  const drumSkin = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.43, 0.43, 0.77, 18),
+    new THREE.MeshStandardMaterial({ color: 0xe8d5b0, roughness: 0.7 }),
   );
-  ceiling.position.set(0, 8.9, -16.2);
-  group.add(ceiling);
+  drumSkin.rotation.z = Math.PI / 2;
+  drumSkin.position.y = 1.15;
+  drumGroup.add(drumFrameL, drumFrameR, drumBody, drumSkin);
+  drumGroup.position.set(-8.2, 1.52, -18.2);
+  group.add(drumGroup);
+
+  const gongGroup = new THREE.Group();
+  const gongStandL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.85, 0.12), redMat);
+  gongStandL.position.set(0, 0.92, -0.62);
+  const gongStandR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.85, 0.12), redMat);
+  gongStandR.position.set(0, 0.92, 0.62);
+  const gongCross = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 1.45), goldMat);
+  gongCross.position.y = 1.84;
+  const gongDisc = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 0.08, 20), goldMat);
+  gongDisc.rotation.z = Math.PI / 2;
+  gongDisc.position.y = 1.16;
+  gongGroup.add(gongStandL, gongStandR, gongCross, gongDisc);
+  gongGroup.position.set(8.2, 1.52, -18.2);
+  group.add(gongGroup);
+
+  // Side Lacquered Ceremonial Tables (Án kỷ) with Porcelain/Gold Vases along side aisles
+  const vaseMat = new THREE.MeshStandardMaterial({ color: 0x1e40af, roughness: 0.22, metalness: 0.2 });
+  for (const side of [-1, 1]) {
+    for (const tz of [-12.2, -23.5]) {
+      const table = new THREE.Group();
+      const top = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.1, 1.9), redMat);
+      top.position.y = 0.92;
+      for (const lx of [-0.36, 0.36]) {
+        for (const lz of [-0.78, 0.78]) {
+          const leg = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.92, 0.09), redMat);
+          leg.position.set(lx, 0.46, lz);
+          table.add(leg);
+        }
+      }
+      const vase = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.15, 0.44, 12), vaseMat);
+      vase.position.set(0, 1.19, 0);
+      const vaseRim = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.025, 6, 12), goldMat);
+      vaseRim.rotation.x = Math.PI / 2;
+      vaseRim.position.set(0, 1.41, 0);
+      table.add(top, vase, vaseRim);
+      table.position.set(side * 9.0, 1.52, tz);
+      group.add(table);
+    }
+  }
+
+  // 8 Hanging Imperial Hexagonal Silk Lanterns along both sides of the central nave
+  for (const side of [-1, 1]) {
+    for (const lz of [-7.5, -13.5, -19.5, -24.5]) {
+      const lantern = new THREE.Group();
+      const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.9, 6), goldMat);
+      cord.position.y = 0.45;
+      const capTop = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.3, 0.1, 6), redMat);
+      capTop.position.y = 0.02;
+      const silkBody = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.24, 0.56, 6), lanternGlowMat);
+      silkBody.position.y = -0.3;
+      const capBot = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.18, 0.1, 6), goldMat);
+      capBot.position.y = -0.62;
+      const tassel = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.05, 0.34, 6), redMat);
+      tassel.position.y = -0.84;
+      lantern.add(cord, capTop, silkBody, capBot, tassel);
+      lantern.position.set(side * 4.3, 5.4, lz);
+      group.add(lantern);
+    }
+  }
 
   return { group };
-}
-
-/**
- * Multi-part Hue Courtyard Tree (Cây xanh Hoàng Thành)
- */
-export function createCourtyardTree(): THREE.Group {
-  const group = new THREE.Group();
-  const barkMat = new THREE.MeshStandardMaterial({ color: 0x523b2a, roughness: 0.92 });
-  const leafMat1 = new THREE.MeshStandardMaterial({ color: 0x2b7333, roughness: 0.85 });
-  const leafMat2 = new THREE.MeshStandardMaterial({ color: 0x3b8c3e, roughness: 0.82 });
-
-  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.32, 3.2, 8), barkMat);
-  trunk.position.y = 1.6;
-  trunk.castShadow = true;
-
-  const crown1 = new THREE.Mesh(new THREE.DodecahedronGeometry(1.55, 1), leafMat1);
-  crown1.position.set(0, 3.8, 0);
-  crown1.scale.set(1.25, 0.88, 1.25);
-  crown1.castShadow = true;
-
-  const crown2 = new THREE.Mesh(new THREE.DodecahedronGeometry(1.1, 1), leafMat2);
-  crown2.position.set(0.9, 3.35, 0.35);
-  crown2.castShadow = true;
-
-  const crown3 = new THREE.Mesh(new THREE.DodecahedronGeometry(1.05, 1), leafMat2);
-  crown3.position.set(-0.85, 3.45, -0.35);
-  crown3.castShadow = true;
-
-  group.add(trunk, crown1, crown2, crown3);
-  return group;
 }
 
 /**

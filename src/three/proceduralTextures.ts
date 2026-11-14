@@ -134,19 +134,101 @@ export function createThroneHallFloorTexture(anisotropy = 8): THREE.CanvasTextur
   canvas.height = 512;
   const ctx = canvas.getContext('2d')!;
 
-  ctx.fillStyle = '#d6c7ad';
+  // Rich polished Nguyễn Dynasty ironwood / teak plank base (Sàn lợp gỗ lim)
+  ctx.fillStyle = '#4e2d18';
   ctx.fillRect(0, 0, 512, 512);
 
-  const step = 64;
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
-      const dark = (r + c) % 2 === 0;
-      ctx.fillStyle = dark ? '#b89f78' : '#dfd2ba';
-      ctx.fillRect(c * step + 1, r * step + 1, step - 2, step - 2);
+  const plankRows = 8;
+  const plankH = 512 / plankRows;
+  const plankColors = [
+    '#663b20',
+    '#5c341b',
+    '#704224',
+    '#553019',
+    '#6a3e22',
+    '#5e361c',
+  ];
+
+  for (let r = 0; r < plankRows; r++) {
+    const y = r * plankH;
+    const stagger = (r % 3) * 170;
+    const segWidths = [256, 256];
+    let curX = -stagger;
+
+    let segIdx = 0;
+    while (curX < 512) {
+      const w = segWidths[segIdx % segWidths.length];
+      const baseColor = plankColors[(r * 3 + segIdx) % plankColors.length];
+
+      // Subtle gradient across plank width for bevel depth
+      const grad = ctx.createLinearGradient(0, y, 0, y + plankH);
+      grad.addColorStop(0, '#442412');
+      grad.addColorStop(0.08, baseColor);
+      grad.addColorStop(0.92, baseColor);
+      grad.addColorStop(1, '#3b1f0f');
+      ctx.fillStyle = grad;
+      ctx.fillRect(curX + 1, y + 1, w - 2, plankH - 2);
+
+      // Longitudinal wood grain streaks
+      ctx.fillStyle = 'rgba(38, 18, 6, 0.22)';
+      for (let g = 0; g < 6; g++) {
+        const gy = y + 8 + ((g * 9 + r * 5) % (plankH - 14));
+        const gx = curX + 12 + ((g * 37 + segIdx * 23) % 45);
+        const gw = Math.max(40, w - 35 - ((g * 29) % 60));
+        ctx.fillRect(gx, gy, gw, 1.5);
+      }
+
+      // Warm highlight grain streak
+      ctx.fillStyle = 'rgba(180, 118, 62, 0.14)';
+      ctx.fillRect(curX + 18, y + plankH * 0.42, w - 42, 1.5);
+
+      // Plank end seam
+      ctx.fillStyle = '#2d160a';
+      ctx.fillRect(curX, y, 2, plankH);
+
+      curX += w;
+      segIdx++;
     }
+
+    // Horizontal plank seam
+    ctx.fillStyle = '#2a1409';
+    ctx.fillRect(0, y, 512, 2);
   }
 
-  return finalizeTexture(canvas, 6, 8, anisotropy);
+  return finalizeTexture(canvas, 5, 7, anisotropy);
+}
+
+export function createRoyalCarpetTexture(anisotropy = 8): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d')!;
+
+  // Deep imperial crimson silk carpet
+  ctx.fillStyle = '#7c1318';
+  ctx.fillRect(0, 0, 256, 512);
+
+  // Outer gold brocade borders
+  ctx.fillStyle = '#d9a438';
+  ctx.fillRect(10, 0, 12, 512);
+  ctx.fillRect(234, 0, 12, 512);
+  ctx.fillStyle = '#f5cb5c';
+  ctx.fillRect(28, 0, 4, 512);
+  ctx.fillRect(224, 0, 4, 512);
+
+  // Subtle woven dragon-cloud medallions down center
+  ctx.strokeStyle = 'rgba(245, 203, 92, 0.26)';
+  ctx.lineWidth = 3;
+  for (let y = 44; y < 512; y += 88) {
+    ctx.beginPath();
+    ctx.arc(128, y, 28, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(128, y, 14, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  return finalizeTexture(canvas, 1, 6, anisotropy);
 }
 
 export function createAoThungTexture(

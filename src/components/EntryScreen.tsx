@@ -1,15 +1,10 @@
-import React, { useRef, useState } from 'react';
-import { ArrowRight, BookOpen, FileUp, Trophy, User } from 'lucide-react';
-import { parseQuestionsFromFile } from '../data/questions';
-import { QuizQuestion } from '../types/game';
+import React, { useState } from 'react';
+import { ArrowRight, Trophy, User } from 'lucide-react';
 
 interface EntryScreenProps {
   studentName: string;
   onChangeName: (name: string) => void;
-  questions: QuizQuestion[];
-  customSourceLabel: string | null;
-  onLoadCustomQuestions: (questions: QuizQuestion[], fileName: string) => void;
-  onResetDefaultQuestions: () => void;
+  totalQuestions: number;
   onStartGame: () => void;
   onOpenLeaderboard: () => void;
   topEntryCount: number;
@@ -18,16 +13,11 @@ interface EntryScreenProps {
 export const EntryScreen: React.FC<EntryScreenProps> = ({
   studentName,
   onChangeName,
-  questions,
-  customSourceLabel,
-  onLoadCustomQuestions,
-  onResetDefaultQuestions,
+  totalQuestions,
   onStartGame,
   onOpenLeaderboard,
   topEntryCount,
 }) => {
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -38,26 +28,6 @@ export const EntryScreen: React.FC<EntryScreenProps> = ({
     }
     setNameError(null);
     onStartGame();
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const text = await file.text();
-      const parsed = parseQuestionsFromFile(text, file.name);
-      if (parsed.length === 0) {
-        setUploadMessage(
-          'Không nhận diện được câu hỏi từ tệp. Vui lòng dùng định dạng TXT ("Câu 1: ... A. ... B. ... C. ... D. ... Đáp án: A"), CSV hoặc JSON.',
-        );
-      } else {
-        onLoadCustomQuestions(parsed, file.name);
-        setUploadMessage(`Đã nạp thành công ${parsed.length} câu hỏi từ "${file.name}".`);
-      }
-    } catch {
-      setUploadMessage('Không thể đọc tệp đã chọn.');
-    }
-    e.target.value = '';
   };
 
   return (
@@ -76,7 +46,9 @@ export const EntryScreen: React.FC<EntryScreenProps> = ({
           </h1>
           <p className="text-sm text-[#c7b8a1] max-w-md mx-auto">
             Nhập vai quan lại mặc áo thụng Ngọc Bích, yết kiến Hoàng đế, vượt qua cổng Ngọ Môn và
-            chinh phục 20 câu hỏi tiến vào Điện Thái Hòa.
+            chinh phục{' '}
+            <span className="font-mono-tabular text-[#fbd46d]">{totalQuestions}</span> câu hỏi trong{' '}
+            <span className="font-mono-tabular text-[#fbd46d]">10:00</span> tiến vào Điện Thái Hòa.
           </p>
         </div>
 
@@ -107,59 +79,6 @@ export const EntryScreen: React.FC<EntryScreenProps> = ({
             </div>
             {nameError && (
               <p className="mt-1.5 text-xs text-[#fca5a5]">{nameError}</p>
-            )}
-          </div>
-
-          {/* Quiz Bank Info & Optional File Import */}
-          <div className="p-4 rounded-lg bg-[#231811] border border-[#b48a3e]/25 space-y-2.5">
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center gap-2 text-sm text-[#e7d8c1]">
-                <BookOpen className="w-4 h-4 text-[#eab308] shrink-0" />
-                <span>
-                  {customSourceLabel
-                    ? `Bộ đề tùy chỉnh: ${customSourceLabel}`
-                    : 'Bộ đề Lịch sử & Văn hóa (20 câu đính kèm)'}
-                </span>
-                <span aria-hidden="true" className="text-[#8c7a64]">
-                  ·
-                </span>
-                <span className="font-mono-tabular text-[#fbd46d]">
-                  {questions.length} câu · 10:00
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".txt,.json,.csv"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-[#332319] hover:bg-[#442f22] text-[#f5efe6] border border-[#b48a3e]/35 transition-colors whitespace-nowrap shrink-0"
-                >
-                  <FileUp className="w-3.5 h-3.5 text-[#eab308]" />
-                  Nạp tệp câu hỏi
-                </button>
-                {customSourceLabel && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onResetDefaultQuestions();
-                      setUploadMessage(null);
-                    }}
-                    className="px-2.5 py-1.5 text-xs text-[#c7b8a1] hover:text-white underline whitespace-nowrap shrink-0"
-                  >
-                    Mặc định
-                  </button>
-                )}
-              </div>
-            </div>
-            {uploadMessage && (
-              <p className="text-xs text-[#fde68a]">{uploadMessage}</p>
             )}
           </div>
 
