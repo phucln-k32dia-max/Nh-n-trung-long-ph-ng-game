@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import {
   createAoThungTexture,
+  createLanternGlowTexture,
+  createLanternSilkTexture,
   createPlaqueTexture,
   createRedLacquerTexture,
   createRoyalCarpetTexture,
@@ -866,4 +868,233 @@ export function createSidePavilion(anisotropy = 8): THREE.Group {
 
   return group;
 }
+
+export interface GuidingLanternHandle {
+  group: THREE.Group;
+  lanternPivot: THREE.Group;
+  silkMaterial: THREE.MeshStandardMaterial;
+  glowSprite: THREE.Sprite;
+  groundGlow: THREE.Mesh | null;
+  zPos: number;
+  phaseOffset: number;
+}
+
+/**
+ * Factory for glowing imperial lanterns (Đèn lồng trụ cung đình) lining the ceremonial path
+ * from Ngọ Môn through Cầu Trung Đạo across Sân Đại Triều Nghi to Điện Thái Hòa.
+ */
+export function createGuidingLanternFactory(anisotropy = 8): {
+  createLantern: (options: {
+    side: -1 | 1;
+    zPos: number;
+    style: 'pillar' | 'bridge_post';
+  }) => GuidingLanternHandle;
+  dispose: () => void;
+} {
+  const glowTex = createLanternGlowTexture();
+  const silkTex = createLanternSilkTexture(anisotropy);
+
+  const stoneMat = new THREE.MeshStandardMaterial({ color: 0xbcb09b, roughness: 0.82 });
+  const redWoodMat = new THREE.MeshStandardMaterial({
+    map: createRedLacquerTexture(anisotropy),
+    roughness: 0.36,
+    metalness: 0.16,
+  });
+  const goldMat = new THREE.MeshStandardMaterial({
+    color: 0xeeb83b,
+    roughness: 0.25,
+    metalness: 0.85,
+  });
+
+  // Shared geometries
+  const plinthGeo = new THREE.BoxGeometry(0.56, 0.24, 0.56);
+  const plinthCapGeo = new THREE.BoxGeometry(0.4, 0.14, 0.4);
+  const tallPoleGeo = new THREE.CylinderGeometry(0.055, 0.072, 2.48, 10);
+  const shortPoleGeo = new THREE.CylinderGeometry(0.048, 0.062, 1.25, 10);
+  const ringGeo = new THREE.CylinderGeometry(0.085, 0.095, 0.08, 12);
+  const topFinialGeo = new THREE.ConeGeometry(0.09, 0.22, 8);
+  const armGeo = new THREE.BoxGeometry(0.54, 0.065, 0.075);
+  const armBraceGeo = new THREE.BoxGeometry(0.32, 0.045, 0.045);
+
+  const cordGeo = new THREE.CylinderGeometry(0.012, 0.012, 0.28, 6);
+  const capTopGeo = new THREE.CylinderGeometry(0.18, 0.24, 0.09, 6);
+  const silkBodyGeo = new THREE.CylinderGeometry(0.22, 0.19, 0.46, 6);
+  const capBotGeo = new THREE.CylinderGeometry(0.18, 0.13, 0.08, 6);
+  const tasselGeo = new THREE.CylinderGeometry(0.022, 0.038, 0.26, 6);
+  const groundPoolGeo = new THREE.PlaneGeometry(2.1, 2.1);
+
+  let createdCount = 0;
+
+  const createLantern = ({
+    side,
+    zPos,
+    style,
+  }: {
+    side: -1 | 1;
+    zPos: number;
+    style: 'pillar' | 'bridge_post';
+  }): GuidingLanternHandle => {
+    const group = new THREE.Group();
+    const inward = -side; // Bracket points inward toward the central walkway (x = 0)
+    const idx = createdCount++;
+
+    let armY = 2.68;
+    let armLength = 0.5;
+
+    if (style === 'pillar') {
+      const plinth = new THREE.Mesh(plinthGeo, stoneMat);
+      plinth.position.y = 0.12;
+      plinth.receiveShadow = true;
+      plinth.castShadow = true;
+
+      const plinthCap = new THREE.Mesh(plinthCapGeo, stoneMat);
+      plinthCap.position.y = 0.31;
+      plinthCap.receiveShadow = true;
+
+      const pole = new THREE.Mesh(tallPoleGeo, redWoodMat);
+      pole.position.y = 1.62;
+      pole.castShadow = true;
+
+      const baseRing = new THREE.Mesh(ringGeo, goldMat);
+      baseRing.position.y = 0.42;
+
+      const capRing = new THREE.Mesh(ringGeo, goldMat);
+      capRing.position.y = 2.74;
+
+      const finial = new THREE.Mesh(topFinialGeo, goldMat);
+      finial.position.y = 2.96;
+
+      group.add(plinth, plinthCap, pole, baseRing, capRing, finial);
+      armY = 2.7;
+      armLength = 0.52;
+    } else {
+      // Ornate short red-and-gold post atop Cầu Trung Đạo stone balustrade post (y = 1.15)
+      const baseRing = new THREE.Mesh(ringGeo, goldMat);
+      baseRing.position.y = 0.04;
+
+      const pole = new THREE.Mesh(shortPoleGeo, redWoodMat);
+      pole.position.y = 0.66;
+      pole.castShadow = true;
+
+      const capRing = new THREE.Mesh(ringGeo, goldMat);
+      capRing.position.y = 1.24;
+
+      const finial = new THREE.Mesh(topFinialGeo, goldMat);
+      finial.position.y = 1.44;
+
+      group.add(baseRing, pole, capRing, finial);
+      armY = 1.22;
+      armLength = 0.44;
+    }
+
+    // Horizontal bracket extending inward toward the Imperial Axis
+    const arm = new THREE.Mesh(armGeo, redWoodMat);
+    arm.scale.x = armLength / 0.54;
+    arm.position.set(inward * (armLength * 0.5), armY, 0);
+    arm.castShadow = true;
+
+    const armTip = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 8), goldMat);
+    armTip.position.set(inward * armLength, armY, 0);
+
+    const brace = new THREE.Mesh(armBraceGeo, goldMat);
+    brace.position.set(inward * (armLength * 0.32), armY - 0.14, 0);
+    brace.rotation.z = inward * 0.68;
+    group.add(arm, armTip, brace);
+
+    // Hanging hexagonal lantern assembly
+    const lanternPivot = new THREE.Group();
+    lanternPivot.position.set(inward * (armLength - 0.04), armY - 0.03, 0);
+
+    const cord = new THREE.Mesh(cordGeo, goldMat);
+    cord.position.y = -0.14;
+
+    const capTop = new THREE.Mesh(capTopGeo, redWoodMat);
+    capTop.position.y = -0.3;
+
+    const silkMaterial = new THREE.MeshStandardMaterial({
+      map: silkTex,
+      color: 0xffd27d,
+      emissive: 0xff9a26,
+      emissiveIntensity: 1.45,
+      roughness: 0.35,
+      metalness: 0.05,
+    });
+    const silkBody = new THREE.Mesh(silkBodyGeo, silkMaterial);
+    silkBody.position.y = -0.56;
+
+    const capBot = new THREE.Mesh(capBotGeo, goldMat);
+    capBot.position.y = -0.82;
+
+    const tassel = new THREE.Mesh(tasselGeo, redWoodMat);
+    tassel.position.y = -0.98;
+
+    // Soft warm daytime glow halo sprite centered on the silk lantern body
+    const glowSpriteMat = new THREE.SpriteMaterial({
+      map: glowTex,
+      color: 0xffcf70,
+      transparent: true,
+      opacity: 0.42,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const glowSprite = new THREE.Sprite(glowSpriteMat);
+    glowSprite.position.set(0, -0.56, 0);
+    glowSprite.scale.set(1.5, 1.5, 1.5);
+
+    lanternPivot.add(cord, capTop, silkBody, capBot, tassel, glowSprite);
+    group.add(lanternPivot);
+
+    // Soft warm light pool on courtyard stone directly under the hanging lantern (pillars only)
+    let groundGlow: THREE.Mesh | null = null;
+    if (style === 'pillar') {
+      const groundMat = new THREE.MeshBasicMaterial({
+        map: glowTex,
+        color: 0xffbe5c,
+        transparent: true,
+        opacity: 0.16,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+      groundGlow = new THREE.Mesh(groundPoolGeo, groundMat);
+      groundGlow.rotation.x = -Math.PI / 2;
+      groundGlow.position.set(inward * (armLength - 0.04), 0.032, 0);
+      group.add(groundGlow);
+    }
+
+    return {
+      group,
+      lanternPivot,
+      silkMaterial,
+      glowSprite,
+      groundGlow,
+      zPos,
+      phaseOffset: idx * 0.65,
+    };
+  };
+
+  const dispose = () => {
+    glowTex.dispose();
+    silkTex.dispose();
+    stoneMat.dispose();
+    redWoodMat.dispose();
+    goldMat.dispose();
+    plinthGeo.dispose();
+    plinthCapGeo.dispose();
+    tallPoleGeo.dispose();
+    shortPoleGeo.dispose();
+    ringGeo.dispose();
+    topFinialGeo.dispose();
+    armGeo.dispose();
+    armBraceGeo.dispose();
+    cordGeo.dispose();
+    capTopGeo.dispose();
+    silkBodyGeo.dispose();
+    capBotGeo.dispose();
+    tasselGeo.dispose();
+    groundPoolGeo.dispose();
+  };
+
+  return { createLantern, dispose };
+}
+
 

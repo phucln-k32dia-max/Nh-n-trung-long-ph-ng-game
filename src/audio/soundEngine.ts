@@ -1,8 +1,22 @@
-// Procedural Web Audio API sound effects for Nguyen Dynasty court ambiance & quiz feedback
+// Procedural Web Audio API sound effects + Imperial Nhã nhạc background music controller
+
+const COURTYARD_BGM_SRC = '/assets/aistudio/l_u_th_y_-_long_cung_9f692c36.mp3';
+const THRONE_HALL_BGM_SRC = '/assets/aistudio/__ng___n_cung_6a93b29f.mp3';
+
+type BgmMode = 'none' | 'courtyard' | 'throne_hall';
+
+interface FadeState {
+  rafId: number | null;
+}
 
 class ImperialSoundEngine {
   private ctx: AudioContext | null = null;
   private muted = false;
+
+  private courtyardAudio: HTMLAudioElement | null = null;
+  private throneHallAudio: HTMLAudioElement | null = null;
+  private bgmMode: BgmMode = 'none';
+  private fadeStates = new WeakMap<HTMLAudioElement, FadeState>();
 
   private ensureContext(): AudioContext | null {
     if (this.muted) return null;
@@ -18,8 +32,192 @@ class ImperialSoundEngine {
     return this.ctx;
   }
 
+  private getOrCreateAudio(kind: 'courtyard' | 'throne_hall'): HTMLAudioElement | null {
+    if (typeof window === 'undefined') return null;
+
+    if (kind === 'courtyard') {
+      if (!this.courtyardAudio) {
+        const audio = new Audio(COURTYARD_BGM_SRC);
+        audio.loop = true;
+        audio.preload = 'auto';
+        audio.volume = 0;
+        audio.muted = this.muted;
+        this.courtyardAudio = audio;
+      }
+      return this.courtyardAudio;
+    }
+
+    if (!this.throneHallAudio) {
+      const audio = new Audio(THRONE_HALL_BGM_SRC);
+      audio.loop = true;
+      audio.preload = 'auto';
+      audio.volume = 0;
+      audio.muted = this.muted;
+      this.throneHallAudio = audio;
+    }
+    return this.throneHallAudio;
+  }
+
+  private cancelFade(audio: HTMLAudioElement) {
+    const state = this.fadeStates.get(audio);
+    if (state?.rafId !== null && state?.rafId !== undefined) {
+      window.cancelAnimationFrame(state.rafId);
+      state.rafId = null;
+    }
+  }
+
+  private fadeAudio(
+    audio: HTMLAudioElement,
+    fromVol: number,
+    toVol: number,
+    durationMs: number,
+    options?: { pauseOnEnd?: boolean; resetOnEnd?: boolean; power?: number },
+  ) {
+    this.cancelFade(audio);
+    const startVol = Math.max(0, Math.min(1, fromVol));
+    const endVol = Math.max(0, Math.min(1, toVol));
+    const power = options?.power ?? 1;
+    audio.volume = startVol;
+
+    if (durationMs <= 0) {
+      audio.volume = endVol;
+      if (options?.pauseOnEnd) {
+        audio.pause();
+        if (options.resetOnEnd) audio.currentTime = 0;
+      }
+      return;
+    }
+
+    const startTime = performance.now();
+    const state: FadeState = { rafId: null };
+    this.fadeStates.set(audio, state);
+
+    const tick = (now: number) => {
+      const elapsed = now - startTime;
+      const linearT = Math.min(1, Math.max(0, elapsed / durationMs));
+      const easedT = power === 1 ? linearT : Math.pow(linearT, power);
+      audio.volume = Math.max(0, Math.min(1, startVol + (endVol - startVol) * easedT));
+
+      if (linearT < 1) {
+        state.rafId = window.requestAnimationFrame(tick);
+      } else {
+        state.rafId = null;
+        if (options?.pauseOnEnd) {
+          audio.pause();
+          if (options.resetOnEnd) audio.currentTime = 0;
+        }
+      }
+    };
+
+    state.rafId = window.requestAnimationFrame(tick);
+  }
+
+  public preloadMusic() {
+    this.getOrCreateAudio('courtyard');
+    this.getOrCreateAudio('throne_hall');
+  }
+
+  // Nhạc Lưu Thủy - Long Cung phát khi bắt đầu đi từ cổng Ngọ Môn đến Điện Thái Hòa
+  public playCourtyardMusic() {
+    const courtyard = this.getOrCreateAudio('courtyard');
+    if (!courtyard) return;
+
+    if (this.bgmMode === 'courtyard') {
+      courtyard.muted = this.muted;
+      if (courtyard.paused) {
+        courtyard.play().catch(() => {});
+      }
+      return;
+    }
+
+    this.bgmMode = 'courtyard';
+
+    if (this.throneHallAudio && !this.throneHallAudio.paused) {
+      this.fadeAudio(this.throneHallAudio, this.throneHallAudio.volume, 0, 800, {
+        pauseOnEnd: true,
+        resetOnEnd: true,
+      });
+    }
+
+    courtyard.currentTime = 0;
+    courtyard.muted = this.muted;
+    courtyard.volume = 0;
+    courtyard.play().catch(() => {});
+    this.fadeAudio(courtyard, 0, 0.42, 1800);
+  }
+
+  // Nhạc Đăng Đàn Cung phát khi bước vào Điện Thái Hòa, nhạc to dần
+  public playThroneHallMusic() {
+    const throneHall = this.getOrCreateAudio('throne_hall');
+    if (!throneHall) return;
+
+    if (this.bgmMode === 'throne_hall') {
+      throneHall.muted = this.muted;
+      if (throneHall.paused) {
+        throneHall.play().catch(() => {});
+      }
+      return;
+    }
+
+    this.bgmMode = 'throne_hall';
+
+    if (this.courtyardAudio && !this.courtyardAudio.paused) {
+      this.fadeAudio(this.courtyardAudio, this.courtyardAudio.volume, 0, 1200, {
+        pauseOnEnd: true,
+        resetOnEnd: true,
+      });
+    }
+
+    throneHall.currentTime = 0;
+    throneHall.muted = this.muted;
+    throneHall.volume = 0.02;
+    throneHall.play().catch(() => {});
+    // Nhạc bắt đầu nhỏ dịu và lớn dần trang nghiêm trong 8 giây khi tiến vào Điện Thái Hòa
+    this.fadeAudio(throneHall, 0.02, 0.85, 8000, { power: 1.45 });
+  }
+
+  public stopAllMusic() {
+    this.bgmMode = 'none';
+    if (this.courtyardAudio) {
+      if (!this.courtyardAudio.paused) {
+        this.fadeAudio(this.courtyardAudio, this.courtyardAudio.volume, 0, 600, {
+          pauseOnEnd: true,
+          resetOnEnd: true,
+        });
+      } else {
+        this.cancelFade(this.courtyardAudio);
+        this.courtyardAudio.currentTime = 0;
+        this.courtyardAudio.volume = 0;
+      }
+    }
+    if (this.throneHallAudio) {
+      if (!this.throneHallAudio.paused) {
+        this.fadeAudio(this.throneHallAudio, this.throneHallAudio.volume, 0, 600, {
+          pauseOnEnd: true,
+          resetOnEnd: true,
+        });
+      } else {
+        this.cancelFade(this.throneHallAudio);
+        this.throneHallAudio.currentTime = 0;
+        this.throneHallAudio.volume = 0;
+      }
+    }
+  }
+
   public setMuted(muted: boolean) {
     this.muted = muted;
+    if (this.courtyardAudio) {
+      this.courtyardAudio.muted = muted;
+      if (!muted && this.bgmMode === 'courtyard' && this.courtyardAudio.paused) {
+        this.courtyardAudio.play().catch(() => {});
+      }
+    }
+    if (this.throneHallAudio) {
+      this.throneHallAudio.muted = muted;
+      if (!muted && this.bgmMode === 'throne_hall' && this.throneHallAudio.paused) {
+        this.throneHallAudio.play().catch(() => {});
+      }
+    }
   }
 
   public isMuted(): boolean {

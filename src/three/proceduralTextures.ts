@@ -357,3 +357,57 @@ export function createSunMoteTexture(): THREE.CanvasTexture {
   tex.needsUpdate = true;
   return tex;
 }
+
+export function createLanternGlowTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d')!;
+
+  const grad = ctx.createRadialGradient(64, 64, 4, 64, 64, 62);
+  grad.addColorStop(0.0, 'rgba(255, 245, 205, 0.96)');
+  grad.addColorStop(0.24, 'rgba(255, 210, 115, 0.62)');
+  grad.addColorStop(0.55, 'rgba(255, 165, 55, 0.24)');
+  grad.addColorStop(0.82, 'rgba(255, 130, 30, 0.06)');
+  grad.addColorStop(1.0, 'rgba(255, 120, 20, 0.0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 128, 128);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+export function createLanternSilkTexture(anisotropy = 8): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d')!;
+
+  const grad = ctx.createLinearGradient(0, 0, 0, 128);
+  grad.addColorStop(0.0, '#c84b18');
+  grad.addColorStop(0.25, '#f29f2e');
+  grad.addColorStop(0.5, '#ffda75');
+  grad.addColorStop(0.75, '#f29f2e');
+  grad.addColorStop(1.0, '#b83c14');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 128, 128);
+
+  // Subtle horizontal silk ribbing & vertical imperial lattice lines
+  ctx.strokeStyle = 'rgba(130, 32, 10, 0.28)';
+  ctx.lineWidth = 2;
+  for (let y = 16; y < 128; y += 20) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(128, y);
+    ctx.stroke();
+  }
+  for (let x = 0; x < 128; x += 21.33) {
+    ctx.fillStyle = 'rgba(110, 22, 12, 0.35)';
+    ctx.fillRect(x, 0, 2, 128);
+  }
+
+  return finalizeTexture(canvas, 1, 1, anisotropy);
+}
+

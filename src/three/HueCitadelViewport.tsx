@@ -7,9 +7,11 @@ import {
   createDienThaiHoaComplex,
   createDragonThrone,
   createEmperorFigure,
+  createGuidingLanternFactory,
   createImperialGuardFigure,
   createMandarinFigure,
   createSidePavilion,
+  GuidingLanternHandle,
 } from './imperialModels';
 import {
   createPhotoMonument,
@@ -156,7 +158,12 @@ export const HueCitadelViewport: React.FC<HueCitadelViewportProps> = ({
     hallLight1.position.set(0, 5.45, -109);
     const hallLight2 = new THREE.PointLight(0xffcb77, 5.4, 30, 1.45);
     hallLight2.position.set(0, 5.45, -119);
-    scene.add(hallLight1, hallLight2);
+    // Subtle warm golden accents at Cầu Trung Đạo & Điện Thái Hòa front marble steps
+    const bridgeWarmAccent = new THREE.PointLight(0xffc46b, 1.9, 18, 1.6);
+    bridgeWarmAccent.position.set(0, 3.2, 3);
+    const stepsWarmAccent = new THREE.PointLight(0xffbd59, 2.8, 18, 1.5);
+    stepsWarmAccent.position.set(0, 3.2, -91);
+    scene.add(hallLight1, hallLight2, bridgeWarmAccent, stepsWarmAccent);
 
     // --------------------------------------------------------
     // 1. Ground, Outer Moat, Royal Path, Hồ Thái Dịch & Cầu Trung Đạo
@@ -587,6 +594,38 @@ export const HueCitadelViewport: React.FC<HueCitadelViewportProps> = ({
       return monument;
     });
 
+    // --------------------------------------------------------
+    // 3C. Glowing Imperial Courtyard Lanterns guiding from Ngọ Môn to Điện Thái Hòa
+    // --------------------------------------------------------
+    const guidingLanternFactory = createGuidingLanternFactory(maxAnisotropy);
+    const guidingLanterns: GuidingLanternHandle[] = [];
+    const bridgeLanternZ = [11, 3, -5];
+    const courtyardLanternZ = [16.5, -14, -24, -34, -44, -54, -64, -74, -84, -91.5];
+
+    for (const side of [-1, 1] as const) {
+      for (const bz of bridgeLanternZ) {
+        const handle = guidingLanternFactory.createLantern({
+          side,
+          zPos: bz,
+          style: 'bridge_post',
+        });
+        handle.group.position.set(side * 2.85, 1.15, bz);
+        scene.add(handle.group);
+        guidingLanterns.push(handle);
+      }
+
+      for (const cz of courtyardLanternZ) {
+        const handle = guidingLanternFactory.createLantern({
+          side,
+          zPos: cz,
+          style: 'pillar',
+        });
+        handle.group.position.set(side * 3.45, 0, cz);
+        scene.add(handle.group);
+        guidingLanterns.push(handle);
+      }
+    }
+
     // Imperial Flag Banners along Sân Đại Triều Nghi (swaying softly)
     const bannerClothMeshes: THREE.Mesh[] = [];
     const poleMat = new THREE.MeshStandardMaterial({ color: 0x6b1616, roughness: 0.5 });
@@ -865,6 +904,21 @@ export const HueCitadelViewport: React.FC<HueCitadelViewportProps> = ({
         mesh.rotation.y = Math.sin(elapsed * 2.2 + idx) * 0.14;
       });
 
+      // Animate guiding courtyard lanterns: gentle breeze sway + subtle forward glow ripple toward Điện Thái Hòa
+      for (let i = 0; i < guidingLanterns.length; i++) {
+        const l = guidingLanterns[i];
+        const wave = 0.5 + 0.5 * Math.sin(elapsed * 2.6 + l.zPos * 0.16);
+        l.silkMaterial.emissiveIntensity = 1.25 + wave * 0.55;
+        l.glowSprite.material.opacity = 0.34 + wave * 0.16;
+        const haloScale = 1.42 + wave * 0.22;
+        l.glowSprite.scale.set(haloScale, haloScale, haloScale);
+        if (l.groundGlow) {
+          (l.groundGlow.material as THREE.MeshBasicMaterial).opacity = 0.13 + wave * 0.07;
+        }
+        l.lanternPivot.rotation.z = Math.sin(elapsed * 1.45 + l.phaseOffset) * 0.045;
+        l.lanternPivot.rotation.x = Math.cos(elapsed * 1.15 + l.phaseOffset) * 0.025;
+      }
+
       // Drifting golden dust motes along sunlit corridor
       if (st.phase !== 'dialogue' && st.phase !== 'reward') {
         const moteAttr = courtyardSunMotes.geometry.getAttribute('position') as THREE.BufferAttribute;
@@ -1053,6 +1107,10 @@ export const HueCitadelViewport: React.FC<HueCitadelViewportProps> = ({
       dienThaiHoaFacade.dispose();
       realTreeFactory.dispose();
       roadsideMonuments.forEach((m) => m.dispose());
+      guidingLanterns.forEach((l) => {
+        l.glowSprite.material.dispose();
+      });
+      guidingLanternFactory.dispose();
       sunMoteTex.dispose();
       envTex.dispose();
       renderer.dispose();

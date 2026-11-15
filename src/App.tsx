@@ -191,9 +191,22 @@ export default function App() {
     soundEngine.setMuted(next);
   };
 
+  // Sync background music with current game phase
+  useEffect(() => {
+    if (phase === 'entering' || phase === 'walking' || phase === 'question') {
+      soundEngine.playCourtyardMusic();
+    } else if (phase === 'entering_hall' || phase === 'reward') {
+      soundEngine.playThroneHallMusic();
+    } else {
+      soundEngine.stopAllMusic();
+    }
+  }, [phase]);
+
   // Reset & start from Entry Screen -> Scene 1: Emperor Dialogue
   const handleStartFromEntry = () => {
     soundEngine.playClick();
+    soundEngine.preloadMusic();
+    soundEngine.stopAllMusic();
     hasSubmittedRef.current = false;
     setLastSubmittedId(null);
     setDialogueIndex(0);
@@ -239,6 +252,7 @@ export default function App() {
     if (phase !== 'ngo_mon') return;
     setGatesOpen(true);
     soundEngine.playGateOpen();
+    soundEngine.playCourtyardMusic();
     setTimerActive(true);
 
     // Wait briefly as heavy gates swing open, then stride through Ngọ Môn
@@ -332,10 +346,10 @@ export default function App() {
       setSelectedOption(null);
       setPhase('walking');
     } else {
-      // Completed Question 20 in front of Điện Thái Hòa!
+      // Completed final question in front of Điện Thái Hòa!
       setTimerActive(false);
       setHallDoorsOpen(true);
-      soundEngine.playRoyalFanfare();
+      soundEngine.playThroneHallMusic();
       setPhase('entering_hall');
 
       window.setTimeout(() => {
@@ -346,6 +360,7 @@ export default function App() {
 
   const handleRestartToEntry = () => {
     soundEngine.playClick();
+    soundEngine.stopAllMusic();
     setTimerActive(false);
     setGatesOpen(false);
     setHallDoorsOpen(false);
