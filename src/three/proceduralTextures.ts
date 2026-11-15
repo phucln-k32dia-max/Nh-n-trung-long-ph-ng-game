@@ -337,3 +337,23 @@ export function createLotusWaterTexture(anisotropy = 8): THREE.CanvasTexture {
 
   return finalizeTexture(canvas, 4, 4, anisotropy);
 }
+
+export function createSunMoteTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d')!;
+
+  const grad = ctx.createRadialGradient(32, 32, 2, 32, 32, 30);
+  grad.addColorStop(0.0, 'rgba(255, 248, 214, 1.0)');
+  grad.addColorStop(0.35, 'rgba(255, 225, 145, 0.75)');
+  grad.addColorStop(0.75, 'rgba(255, 200, 100, 0.2)');
+  grad.addColorStop(1.0, 'rgba(255, 190, 90, 0.0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 64, 64);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}

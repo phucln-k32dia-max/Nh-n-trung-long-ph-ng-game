@@ -24,15 +24,17 @@ import {
   createCourtyardStoneTexture,
   createLotusWaterTexture,
   createRoyalPathTexture,
+  createSunMoteTexture,
 } from './proceduralTextures';
 
 interface HueCitadelViewportProps {
   phase: GamePhase;
-  totalStepsMoved: number; // 0 .. 100 (20 questions * 5 steps)
+  totalStepsMoved: number; // 0 .. maxSteps (totalQuestions * 5)
+  maxSteps: number;
   gatesOpen: boolean;
   hallDoorsOpen: boolean;
   isWalkingStep: boolean;
-  isCommended: boolean; // True when Q20 answered or final audience reached
+  isCommended: boolean; // True when final question answered or final audience reached
 }
 
 // Module-scoped reusable vectors to avoid GC inside animation loop
@@ -57,6 +59,7 @@ function detectSoftwareWebGL(): boolean {
 export const HueCitadelViewport: React.FC<HueCitadelViewportProps> = ({
   phase,
   totalStepsMoved,
+  maxSteps,
   gatesOpen,
   hallDoorsOpen,
   isWalkingStep,
@@ -67,6 +70,7 @@ export const HueCitadelViewport: React.FC<HueCitadelViewportProps> = ({
   const stateRef = useRef({
     phase,
     totalStepsMoved,
+    maxSteps,
     gatesOpen,
     hallDoorsOpen,
     isWalkingStep,
@@ -77,12 +81,13 @@ export const HueCitadelViewport: React.FC<HueCitadelViewportProps> = ({
     stateRef.current = {
       phase,
       totalStepsMoved,
+      maxSteps,
       gatesOpen,
       hallDoorsOpen,
       isWalkingStep,
       isCommended,
     };
-  }, [phase, totalStepsMoved, gatesOpen, hallDoorsOpen, isWalkingStep, isCommended]);
+  }, [phase, totalStepsMoved, maxSteps, gatesOpen, hallDoorsOpen, isWalkingStep, isCommended]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -104,11 +109,11 @@ export const HueCitadelViewport: React.FC<HueCitadelViewportProps> = ({
 
     const maxAnisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 
-    // Scene & Crisp Sunny Huế Daytime Atmosphere (inspired by aerial citadel photo)
+    // Scene & Warm Golden-Afternoon Huế Citadel Atmosphere (Nắng chiều cổ kính)
     const scene = new THREE.Scene();
-    const skyColor = new THREE.Color(0x9ad0f0);
+    const skyColor = new THREE.Color(0x9fd2ec);
     scene.background = skyColor;
-    scene.fog = new THREE.FogExp2(0xc4e0f0, 0.0038);
+    scene.fog = new THREE.FogExp2(0xd8e4df, 0.0042);
 
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
     const envTex = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
@@ -123,12 +128,12 @@ export const HueCitadelViewport: React.FC<HueCitadelViewportProps> = ({
     );
     camera.position.set(0, 2.4, 42);
 
-    // Bright Hue Daylight + Cool Sky Hemisphere Lighting Rig
-    const hemiLight = new THREE.HemisphereLight(0xd8efff, 0x5c7640, 0.98);
+    // Warm Afternoon Sunlight + Cool Sky Hemisphere Fill
+    const hemiLight = new THREE.HemisphereLight(0xe4f1ff, 0x627345, 0.92);
     scene.add(hemiLight);
 
-    const sunLight = new THREE.DirectionalLight(0xfff5e0, 2.05);
-    sunLight.position.set(30, 48, 34);
+    const sunLight = new THREE.DirectionalLight(0xffeed0, 2.2);
+    sunLight.position.set(34, 34, 24);
     sunLight.castShadow = !isSoftwareGl;
     sunLight.shadow.mapSize.width = 2048;
     sunLight.shadow.mapSize.height = 2048;
@@ -142,7 +147,7 @@ export const HueCitadelViewport: React.FC<HueCitadelViewportProps> = ({
     sunLight.shadow.normalBias = 0.02;
     scene.add(sunLight);
 
-    const rimLight = new THREE.DirectionalLight(0xc7e0ff, 0.5);
+    const rimLight = new THREE.DirectionalLight(0xcfe3ff, 0.48);
     rimLight.position.set(-24, 18, -50);
     scene.add(rimLight);
 
@@ -571,7 +576,7 @@ export const HueCitadelViewport: React.FC<HueCitadelViewportProps> = ({
 
     const roadsideMonuments: RoadsideMonumentResult[] = monumentSpecs.map((spec, idx) => {
       const side = idx % 2 === 0 ? -1 : 1;
-      const zPos = -15 - idx * 6; // Even 6m alternating spacing: -15 (L), -21 (R), -27 (L) ... -87 (L)
+      const zPos = -14 - idx * 6; // Even 6m alternating spacing centered at z = -50: -14 (L), -20 (R) ... -86 (L)
       const monument = createRoadsideMonument({
         ...spec,
         anisotropy: maxAnisotropy,
@@ -713,22 +718,52 @@ export const HueCitadelViewport: React.FC<HueCitadelViewportProps> = ({
     scene.add(camera);
 
     // --------------------------------------------------------
-    // 6. Subtle Golden Celebration Particles inside Điện Thái Hòa
+    // 6. Warm Atmospheric Dust Motes & Celebration Particles
     // --------------------------------------------------------
+    const sunMoteTex = createSunMoteTexture();
+
+    // Drifting golden dust motes floating through the sunlit corridor (Ngọ Môn -> Điện Thái Hòa)
+    const moteCount = 160;
+    const motePos = new Float32Array(moteCount * 3);
+    const moteSpeed = new Float32Array(moteCount);
+    for (let i = 0; i < moteCount; i++) {
+      motePos[i * 3] = (Math.random() - 0.5) * 26;
+      motePos[i * 3 + 1] = 0.6 + Math.random() * 6.4;
+      motePos[i * 3 + 2] = -95 + Math.random() * 118;
+      moteSpeed[i] = 0.22 + Math.random() * 0.35;
+    }
+    const moteGeo = new THREE.BufferGeometry();
+    moteGeo.setAttribute('position', new THREE.BufferAttribute(motePos, 3));
+    const moteMat = new THREE.PointsMaterial({
+      map: sunMoteTex,
+      color: 0xffebb8,
+      size: 0.22,
+      transparent: true,
+      opacity: 0.68,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const courtyardSunMotes = new THREE.Points(moteGeo, moteMat);
+    scene.add(courtyardSunMotes);
+
+    // Subtle Golden Celebration Particles inside Điện Thái Hòa
     const petalCount = 70;
     const petalPos = new Float32Array(petalCount * 3);
     for (let i = 0; i < petalCount; i++) {
       petalPos[i * 3] = (Math.random() - 0.5) * 16;
-      petalPos[i * 3 + 1] = 2 + Math.random() * 6.5;
+      petalPos[i * 3 + 1] = 2 + Math.random() * 4.2;
       petalPos[i * 3 + 2] = -124 + Math.random() * 24;
     }
     const petalGeo = new THREE.BufferGeometry();
     petalGeo.setAttribute('position', new THREE.BufferAttribute(petalPos, 3));
     const petalMat = new THREE.PointsMaterial({
+      map: sunMoteTex,
       color: 0xfde047,
-      size: 0.14,
+      size: 0.24,
       transparent: true,
-      opacity: 0.85,
+      opacity: 0.88,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
     });
     const celebrationPetals = new THREE.Points(petalGeo, petalMat);
     celebrationPetals.visible = false;
@@ -830,6 +865,19 @@ export const HueCitadelViewport: React.FC<HueCitadelViewportProps> = ({
         mesh.rotation.y = Math.sin(elapsed * 2.2 + idx) * 0.14;
       });
 
+      // Drifting golden dust motes along sunlit corridor
+      if (st.phase !== 'dialogue' && st.phase !== 'reward') {
+        const moteAttr = courtyardSunMotes.geometry.getAttribute('position') as THREE.BufferAttribute;
+        for (let i = 0; i < moteCount; i++) {
+          let mx = moteAttr.getX(i) - delta * 0.18 * moteSpeed[i];
+          let my = moteAttr.getY(i) - delta * 0.14 * moteSpeed[i];
+          if (my < 0.5) my = 6.8;
+          if (mx < -13.5) mx = 13.5;
+          moteAttr.setXY(i, mx, my);
+        }
+        moteAttr.needsUpdate = true;
+      }
+
       // Gate & Hall Doors animation
       const targetNgoMonAngle = st.gatesOpen ? 1.48 : 0;
       ngoMonDoorAngle = THREE.MathUtils.damp(ngoMonDoorAngle, targetNgoMonAngle, 3.2, delta);
@@ -889,7 +937,8 @@ export const HueCitadelViewport: React.FC<HueCitadelViewportProps> = ({
         playerMandarin.visible = false;
         celebrationPetals.visible = false;
 
-        const targetZ = 17.5 - st.totalStepsMoved * 1.015;
+        const journeyProgress = Math.min(1, st.totalStepsMoved / Math.max(1, st.maxSteps));
+        const targetZ = 17.5 - journeyProgress * 101.5;
         _desiredCamPos.set(0, 1.75 + stepBob, targetZ);
         _lookTarget.set(
           Math.sin(lookYaw) * 14,
@@ -1004,6 +1053,7 @@ export const HueCitadelViewport: React.FC<HueCitadelViewportProps> = ({
       dienThaiHoaFacade.dispose();
       realTreeFactory.dispose();
       roadsideMonuments.forEach((m) => m.dispose());
+      sunMoteTex.dispose();
       envTex.dispose();
       renderer.dispose();
       if (renderer.domElement.parentNode === container) {

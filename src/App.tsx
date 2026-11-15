@@ -368,6 +368,7 @@ export default function App() {
       <HueCitadelViewport
         phase={phase}
         totalStepsMoved={totalStepsMoved}
+        maxSteps={totalQuestions * STEPS_PER_QUESTION}
         gatesOpen={gatesOpen}
         hallDoorsOpen={hallDoorsOpen}
         isWalkingStep={isWalkingStep}
@@ -657,7 +658,7 @@ export default function App() {
                   ? `“Khá lắm, ${studentName || 'ái khanh'}! Khanh đã xuất sắc trả lời đúng câu hỏi cuối cùng trước Điện Thái Hòa, xứng danh bậc nhân tài triều Nguyễn.”`
                   : timedOut
                     ? `Thời gian 10 phút đã kết thúc. Triều đình ghi nhận thành tích của ${studentName || 'sĩ tử'} trên bảng vàng.`
-                    : `Triều đình ghi nhận nỗ lực của ${studentName || 'sĩ tử'} tại kỳ thi Nhân Trung Long Phượng. Hãy tiếp tục ôn luyện sử Việt để đạt danh hiệu cao hơn!`}
+                    : `Triều đình ghi nhận nỗ lực của ${studentName || 'sĩ tử'} tại kỳ thi Nhân Trung Long Phượng. Hãy tiếp tục ôn luyện Tin học để đạt danh hiệu cao hơn!`}
               </p>
 
               {/* Summary metrics (clean unboxed tabular layout) */}
